@@ -21,7 +21,23 @@ function site_type_values(){
 		}
 		return $blogtypes;
 }
-
+function variation_values(){
+		$sites = get_sites( array( 'number' => 99999));
+		$variations = array();
+		foreach( $sites as $site ){
+			switch_to_blog( $site->blog_id );
+			$site_variations = maybe_unserialize(get_theme_mod('vtt-variation-choices'));
+			if($site_variations){
+				foreach ($site_variations as $site_variation){
+					if(!in_array($site_variation, $variations)){
+						array_push($variations, $site_variation);
+					}
+				}
+			}
+			restore_current_blog();
+		}
+		return $variations;
+}
 /***************************************************************
  Filters for organization-hub\admin-pages\tabs\sites\list.php 
 ****************************************************************/
@@ -59,6 +75,7 @@ function ohv_more_filters($extra_filter, $filters){
 add_action('orghub_inline_filter','ohv_inline_filter');
 function ohv_inline_filter($list_table){
 	$blogtypes = site_type_values();
+	$variations = variation_values();
 	?>
 	<table id="inline-change-blogtype"
 			   class="list-table-inline-bulk-action"
@@ -66,7 +83,7 @@ function ohv_inline_filter($list_table){
 			   action="change-blogtype"
 			   style="display:none">
 		<tr class="inline-bulk-action">
-			<td colspan="<?php //echo $list_table->get_column_count(); ?>" class="colspanchange">
+			<td colspan="<?php echo $list_table->get_column_count(); ?>" class="colspanchange">
 				<fieldset class="inline-change-blogtype-col-left">
 				<div class="inline-change-blogtype-col">
 					<h4>Choose Site Type</h4>
@@ -75,6 +92,26 @@ function ohv_inline_filter($list_table){
 							<option value="<?php echo $blogtype; ?>"><?php echo $blogtype; ?></option>
 						<?php endforeach; ?>
 					</select>
+					<button class="bulk-save">Save</button>
+					<button class="bulk-cancel">Cancel</button>						
+				</div>
+				</fieldset>
+			</td>
+		</tr>
+	</table>
+	<table id="inline-change-variations"
+			   class="list-table-inline-bulk-action"
+			   table="orghub-sites"
+			   action="change-variations"
+			   style="display:none">
+		<tr class="inline-bulk-action">
+			<td colspan="<?php echo $list_table->get_column_count(); ?>" class="colspanchange">
+				<fieldset class="inline-change-variations-col-left">
+				<div class="inline-change-variations-col">
+					<h4>Choose Variations</h4>
+						<?php $i = 0; foreach( $variations as $variation ):?>
+							<input name="bulk[variations<?php echo $i;?>]" type="checkbox" value="<?php echo $variation; ?>"><?php echo $variation; ?></input><br>
+						<?php $i++; endforeach; ?>
 					<button class="bulk-save">Save</button>
 					<button class="bulk-cancel">Cancel</button>						
 				</div>
@@ -91,43 +128,46 @@ function ohv_inline_filter($list_table){
 ****************************************************************/
 add_filter('orghub_create_table', 'ohv_create_table');
 function ohv_create_table($sql){
-	$sql .= "blogtype NOT NULL DEFAULT '',";
+	$variations_default = maybe_serialize(array('default','dark'));
+	$sql .= "blogtype NOT NULL DEFAULT '', variations NOT NULL DEFAULT $variations_default";
 	return $sql;
 }
 
 add_filter('orghub_db_fields_insert', 'ohv_db_fields_insert');
 function ohv_db_fields_insert($db_fields_insert){
 	$db_fields_insert['blogtype'] = $args['blogtype'];
+	$db_fields_insert['variations'] = $args['variations'];
 	return $db_fields_insert;
 }
 
 add_filter('orghub_db_types_insert','ohv_db_types_insert');
 function ohv_db_types_insert($db_types_update){
-	array_push($db_types_insert, '%s');
+	array_push($db_types_insert, '%s', '%s');
 	return $db_types_insert;
 }
 
 add_filter('orghub_db_fields_update', 'ohv_db_fields_update', 10, 2);
 function ohv_db_fields_update($db_fields_update, $args){
 	$db_fields_update['blogtype'] = $args['blogtype'];
+	$db_fields_update['variations'] = $args['variations'];
 	return $db_fields_update;
 }
 
 add_filter('orghub_db_types_update','ohv_db_types_update');
 function ohv_db_types_update($db_types_update){
-	array_push($db_types_update, '%s');
+	array_push($db_types_update, '%s', '%s');
 	return $db_types_update;
 }
 
 add_filter('orghub_fields_list_sites','ohv_fields_list_sites');
 function ohv_fields_list_sites($fields_list){
-	array_push($fields_list, 'blogtype');
+	array_push($fields_list, 'blogtype', 'variations');
 	return $fields_list;
 }
 
 add_filter('orghub_fields_list_site','ohv_fields_list_site');
 function ohv_fields_list_site($fields_list){
-	array_push($fields_list, 'blogtype');
+	array_push($fields_list, 'blogtype', 'variations');
 	return $fields_list;
 }
 
@@ -157,13 +197,13 @@ function ohv_site_fields($site, $blog_id){
 
 add_filter('orghub_csv_headers','ohv_csv_headers');
 function ohv_csv_headers($headers){
-	array_push($headers, 'blogtype');
+	array_push($headers, 'blogtype', 'variations');
 	return $headers;
 }
 
 add_filter('orghub_csv_values','ohv_csv_values');
 function ohv_csv_values($extra_values){
-	array_push($extra_values, 'blogtype');
+	array_push($extra_values, 'blogtype', 'variations');
 	return $extra_values;
 }
 
@@ -175,12 +215,14 @@ function ohv_csv_values($extra_values){
 add_filter('orghub_table_columns','ohv_table_columns');
 function ohv_table_columns($table_columns){
 	$table_columns['blogtype'] = 'Site Type';
+	$table_columns['variations'] = 'Valid Variations';
 	return $table_columns;
 }
 
 add_filter('orghub_actions','ohv_actions');
 function ohv_actions($actions){
 	$actions['change-blogtype'] = 'Change Site Type';
+	$actions['change-variations'] = 'Change Variations';
 	return $actions;
 }
 
@@ -188,21 +230,35 @@ add_action('orghub_batch_action', 'ohv_batch_action', 10, 3);
 function ohv_batch_action($action, $sites, $input){
 	if($action == 'change-blogtype'){
 		foreach( $sites as $site_id ){
-			update_blog_option($site_id, 'blogtype', $input['blogtype']);
-			//Should refresh site to update but this code is in OrgHub sites-model.php 
-			//How to call?
-			//refresh_site( $blog_id );
+			update_blog_option($site_id, 'blogtype', $input['blogtype']);			
 		}
 	}
 	elseif($action == 'change-variations'){
-		
+		$matched_variations = array();
+		foreach($input as $key=>$value){
+			if(stristr($key,'variations')!==FALSE)
+				array_push($matched_variations, $value);
+		}
+		foreach( $sites as $site_id ){
+			switch_to_blog( $site_id );
+			set_theme_mod('vtt-variation-choices',$matched_variations);
+			restore_current_blog();
+		}
 	}
+	//Should refresh site to update but this code is in OrgHub sites-model.php 
+			//How to call?
+			//refresh_site( $blog_id );
 }
 
 add_filter('orghub_column_html', 'ohv_column_html', 10, 3);
 function ohv_column_html($column, $item, $html){
 	if($column == 'blogtype'){
 		$html = $item['blogtype'];
+	}
+	if($column == 'variations'){
+		if($item['variations']){
+			$html = implode(", ",maybe_unserialize($item['variations'])); 
+		}
 	}
 	return $html;
 }
