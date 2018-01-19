@@ -188,11 +188,15 @@ function ohv_filter( $where_string, $filter ) {
     return $where_string;
 }
 
+//THIS FILTER IS NOT WORKING
 add_filter('orghub_site_fields', 'ohv_site_fields', 10, 2);
 function ohv_site_fields($site, $blog_id){
-	$site['status'] = 'No';
-	//$site['blogtype'] = get_blog_option($blog_id, 'blogtype', 'Not Set');
-    return $site;
+	switch_to_blog( $blog_id );
+	$site['status'] = 'QXZ';
+	$site['blogtype'] = get_option('blogtype', 'Not Set');
+    $site['variations'] = maybe_serialize(get_theme_mod('vtt-variation-choices'));
+	restore_current_blog();
+	return $site;
 }
 
 add_filter('orghub_csv_headers','ohv_csv_headers');
@@ -231,6 +235,8 @@ function ohv_batch_action($action, $sites, $input){
 	if($action == 'change-blogtype'){
 		foreach( $sites as $site_id ){
 			update_blog_option($site_id, 'blogtype', $input['blogtype']);			
+			// $oh_model = new OrgHub_SitesModel;
+			// $oh_model->refresh_site( $site_id );
 		}
 	}
 	elseif($action == 'change-variations'){
@@ -243,11 +249,13 @@ function ohv_batch_action($action, $sites, $input){
 			switch_to_blog( $site_id );
 			set_theme_mod('vtt-variation-choices',$matched_variations);
 			restore_current_blog();
+			// $oh_model = new OrgHub_SitesModel;
+			// $oh_model->refresh_site( $site_id );
 		}
 	}
-	//Should refresh site to update but this code is in OrgHub sites-model.php 
-			//How to call?
-			//refresh_site( $blog_id );
+//Should refresh site to update but this code is in OrgHub sites-model.php 
+//OrgHub_SitesModel class is protected.
+	
 }
 
 add_filter('orghub_column_html', 'ohv_column_html', 10, 3);
