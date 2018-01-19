@@ -51,7 +51,8 @@ function ohv_filter_types( $filter_types ) {
 add_filter('orghub_more_filters', 'ohv_more_filters', 10, 2);
 function ohv_more_filters($extra_filter, $filters){
 	$filter_values = "";
-	foreach(site_type_values() as $value){
+	$site_values = site_type_values();
+	foreach($site_values as $value){
 		$filter_values .= '<option value="'.$value.'"'.selected($value, $filters['blogtype'],false).'>'.$value.'</option>';
 	}
 	$extra_filter = '<div class="blogtype">
@@ -188,14 +189,10 @@ function ohv_filter( $where_string, $filter ) {
     return $where_string;
 }
 
-//THIS FILTER IS NOT WORKING
-add_filter('orghub_site_fields', 'ohv_site_fields', 10, 2);
-function ohv_site_fields($site, $blog_id){
-	switch_to_blog( $blog_id );
-	$site['status'] = 'QXZ';
+add_filter('orghub_site_fields', 'ohv_site_fields');
+function ohv_site_fields($site){
 	$site['blogtype'] = get_option('blogtype', 'Not Set');
     $site['variations'] = maybe_serialize(get_theme_mod('vtt-variation-choices'));
-	restore_current_blog();
 	return $site;
 }
 
