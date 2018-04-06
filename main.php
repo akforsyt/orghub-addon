@@ -2,8 +2,8 @@
 /*
 Plugin Name: Organization Hub Add-on
 Plugin URI: https://github.com/clas-web/orghub-addon
-Description: The Organization Hub (Network) is a collection of useful tools for maintaining a multisite WordPress instance for an organization.  The Users page keeps track of the organization users, their profile site, and any connections posts (see Connections Hub).  The Sites page is a listing of all the current sites, its posts and pages count, and the last time it was updated and by whom.  The Upload page is used to batch import large amounts of posts, pages, links, taxonomies, users, and sites.
-Version: 0.0.1
+Description: The Organization Hub Add-on works with the Organization Hub Plugin.  The Add-on adds the blogtype and variations filters, columns, and bulk change capabilities to the sites page.
+Version: 1.0.0
 Author: Aaron Forsyth
 Author URI:
 Network: True
@@ -262,7 +262,13 @@ function ohv_column_html($column, $item, $html){
 	}
 	if($column == 'variations'){
 		if($item['variations']){
-			$html = implode(", ",maybe_unserialize($item['variations'])); 
+			switch_to_blog( $item['blog_id']);
+			$current_variation = get_theme_mod('vtt-variation');
+			$variations_array = maybe_unserialize($item['variations']);
+			$variation_key = array_search($current_variation, $variations_array);
+			$variations_array[$variation_key] = '<span style="font-weight:700">'.$current_variation.'</span>';
+			$html = implode(", ", $variations_array); 
+			restore_current_blog();
 		}
 	}
 	return $html;
