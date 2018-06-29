@@ -3,9 +3,8 @@
 Plugin Name: Organization Hub Add-on
 Plugin URI: https://github.com/clas-web/orghub-addon
 Description: The Organization Hub Add-on works with the Organization Hub Plugin.  The Add-on adds the blogtype and variations filters, columns, and bulk change capabilities to the sites page.
-Version: 1.0.0
+Version: 1.0.1
 Author: Aaron Forsyth
-Author URI:
 Network: True
 GitHub Plugin URI: https://github.com/clas-web/orghub-addon
 */
@@ -265,9 +264,8 @@ function ohv_column_html($column, $item, $html){
 			switch_to_blog( $item['blog_id']);
 			$current_variation = get_theme_mod('vtt-variation');
 			$variations_array = maybe_unserialize($item['variations']);
-			$variation_key = array_search($current_variation, $variations_array);
-			$variations_array[$variation_key] = '<span style="font-weight:700">'.$current_variation.'</span>';
-			$html = implode(", ", $variations_array); 
+			$html = implode(", ", $variations_array);
+			$html .= "<br><strong>Active: ".$current_variation."</strong>";
 			restore_current_blog();
 		}
 	}
